@@ -16,6 +16,11 @@ commands = [
     telebot.types.BotCommand("help", "Доступные команды")
 ]
 
+markup = telebot.types.InlineKeyboardMarkup()
+df_btn = telebot.types.InlineKeyboardButton("", callback_data='df_btn')
+dt_btn = telebot.types.InlineKeyboardButton("", callback_data='dt_btn')
+markup.add(df_btn, dt_btn)
+
 @bot.message_handler(commands=["start"])
 def start(message):
     bot.send_message(message.chat.id,Phrases.START.value)
@@ -107,21 +112,57 @@ def start_duel(message):
     else:
         bot.send_message(message.chat.id,gm.start_duel())
         time.sleep(1)
-        bot.send_message(message.chat.id,gm.duel.first_move())
-        time.sleep(3)
-        while(gm.duel.pair["winner"]==""):
-            controller=Controller(gm.duel.attacker,gm.duel.defender)
-            is_moving=True
-            while(is_moving):
-                actions=controller.make_move()
-                bot.send_message(message.chat.id,gm.duel.make_attacker_move(actions[0])+gm.duel.make_defender_move(actions[1]))
-                time.sleep(1)
-                bot.send_message(message.chat.id,gm.duel.execute_all_actions())
-                time.sleep(1)
-                if actions[0]==Actions.PASS: is_moving=False
-            bot.send_message(message.chat.id,gm.duel.pass_move())
+        if gm.duel_detailed:
+            bot.send_message(message.chat.id,gm.duel.first_move())
             time.sleep(3)
+            while(gm.duel.pair["winner"]==""):
+                controller=Controller(gm.duel.attacker,gm.duel.defender)
+                is_moving=True
+                while(is_moving):
+                    actions=controller.make_move()
+                    bot.send_message(message.chat.id,gm.duel.make_attacker_move(actions[0])+gm.duel.make_defender_move(actions[1]))
+                    time.sleep(1)
+                    bot.send_message(message.chat.id,gm.duel.execute_all_actions())
+                    time.sleep(1)
+                    if actions[0]==Actions.PASS: is_moving=False
+                bot.send_message(message.chat.id,gm.duel.pass_move())
+                time.sleep(3)
+        else:
+            while(gm.duel.pair["winner"]==""):
+                controller=Controller(gm.duel.attacker,gm.duel.defender)
+                is_moving=True
+                while(is_moving):
+                    actions=controller.make_move()
+                    gm.duel.make_attacker_move(actions[0])
+                    gm.duel.make_defender_move(actions[1])
+                    gm.duel.execute_all_actions()
+                    if actions[0]==Actions.PASS: is_moving=False
+                gm.duel.pass_move()
+            bot.send_message(message.chat.id,gm.duel.show_summary())              
         bot.send_message(message.chat.id,gm.advance_stage())
+        
+@bot.message_handler(commands=["set_duel_view"])
+def set_duel_view(message):
+    df_btn_txt="По умолчанию"
+    dt_btn_txt="Подробный"
+    if gm.duel_detailed: dt_btn_txt+=" \U00002714"
+    else: df_btn_txt+=" \U00002714"
+    df_btn.text=df_btn_txt
+    dt_btn.text=dt_btn_txt
+    bot.send_message(message.chat.id,"Выберите режим отображения поединка",reply_markup=markup)
+    
+@bot.callback_query_handler(func=lambda call: True)
+def callback_query(call):
+    if call.data == 'df_btn':
+        gm.duel_detailed=False
+        df_btn.text="По умолчанию \U00002714"
+        dt_btn.text="Подробный"
+        bot.edit_message_text('Выбран режим отображения: по умолчанию', chat_id=call.message.chat.id, message_id=call.message.id, reply_markup=markup)
+    elif call.data == 'dt_btn':
+        gm.duel_detailed=True
+        df_btn.text="По умолчанию"
+        dt_btn.text="Подробный \U00002714"
+        bot.edit_message_text('Выбран режим отображения: подробный', chat_id=call.message.chat.id, message_id=call.message.id, reply_markup=markup)
 
 bot.set_my_commands(commands)
 

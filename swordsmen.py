@@ -28,30 +28,33 @@ class Swordsman:
         self.attributes={"health":100,"initiative":10,"skill":10,"armor":100} if attributes==None else attributes
         self.skills={"attacking":80,"defence":20,"dodging":20,"mastery":5,"healing":30} if skills==None else skills
         self.resistance={"heat":5,"cold":5,"shock":5,"poison":5,"curse":5} if resistance==None else resistance
-        self.recovering={"ap":3,"sp":2}     
+        self.recovering={"ap":3,"sp":3}
+        self.costs={"attack":3,"block":2,"heal":4}
         
         self.reset_changing_params()
         
-        self.is_attacking=False
         self.action=Actions.PASS
     
-    def attack(self,block,arp):
-        self.changing_params["ap"]-=3
+    def attack(self,block,defender):
+        self.changing_params["ap"]-=self.costs["attack"]
         attack=self.skills["attacking"]
         hp_dmg=0
         arp_dmg=0
-        if self.compare_attributes(attack,block):
-            attack=random.randrange(attack//2,attack+1)
-        else:
-            return (hp_dmg,arp_dmg)
-        if arp<attack:
-            hp_dmg=attack-arp
+        if block>0:
+            if self.compare_attributes(attack,block):
+                attack=random.randrange(attack//2,attack+1)
+            else:
+                return (defender.name,hp_dmg,arp_dmg)
+        if defender.changing_params["arp"]<attack:
+            hp_dmg=attack-defender.changing_params["arp"]
             attack-=hp_dmg
         arp_dmg=random.randrange(attack+1)
-        return (hp_dmg,arp_dmg)
+        defender.changing_params["hp"]-=hp_dmg
+        defender.changing_params["arp"]-=arp_dmg
+        return (self.name,hp_dmg,arp_dmg)
     
     def block(self):
-        self.changing_params["ap"]-=1
+        self.changing_params["ap"]-=self.costs["block"]
         return self.skills["defence"]
     
     def dodge(self):
@@ -67,7 +70,7 @@ class Swordsman:
         pass    
     
     def heal(self):        
-        self.changing_params["sp"]-=4
+        self.changing_params["sp"]-=self.costs["heal"]
         hp_incr=random.randrange(1,self.skills["healing"]+1)
         bleed_decr=random.randrange(1,self.skills["healing"]+1) if self.changing_params["bleeding"]>0 else 0
         self.changing_params["hp"]+=hp_incr

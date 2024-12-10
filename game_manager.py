@@ -25,7 +25,8 @@ class Phrases(enum.Enum):
 /start_tournament - начать турнир
 /save_tournament - сохранить текущий турнир
 /load_tournament - загрузить последний сохраненный турнир
-/start_duel - начать очередной поединок"""
+/start_duel - начать очередной поединок
+/set_duel_view - сменить режим отображения поединка"""
     
     CLASS_LIST="Список доступных классов мечников:"+"\n\U00002022 ".join(swordsmen.get_classes_list())
     
@@ -77,6 +78,8 @@ class Phrases(enum.Enum):
     
     FINAL_STAGE="Турнир окончен! Победитель турнира - {0}!"
     
+    DUEL_VIEW="Режим отображения поединка: {0}"
+    
 class Scenes(enum.Enum):
     TITLE=enum.auto()
     STAGE=enum.auto()
@@ -88,6 +91,7 @@ class GameManager:
         self.swordsmen_dict=dict()
         self.current_scene=Scenes.TITLE
         self.update_swordsmen_dict()
+        self.duel_detailed=False
         
     def create_swordsman(self,name,class_name):
         try:            
@@ -202,3 +206,7 @@ class GameManager:
             return Phrases.FINAL_STAGE.value.format(result[1])
         else:
             return Phrases.CURRENT_STAGE.value.format(result[1])
+        
+    def set_duel_view(self):
+        self.duel_detailed=False if self.duel_detailed else True
+        return Phrases.DUEL_VIEW.value.format("подробный" if self.duel_detailed else "по умолчанию")

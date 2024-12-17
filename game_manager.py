@@ -92,14 +92,17 @@ class GameManager:
         self.current_scene=Scenes.TITLE
         self.update_swordsmen_dict()
         self.duel_detailed=False
+        self.current_duelists=tuple()
         
     def create_swordsman(self,name,class_name):
         try:            
             names=list(map(lambda x: x.removesuffix(".json"),os.listdir("swordsmen")))
             if(name not in names):
                 obj=swordsmen.create_swordsman(name,class_name)
+                dict_to_write=obj.__dict__
+                del dict_to_write["action"]
                 with open(f"swordsmen\\{name}.json","w") as write_file:
-                    json.dump(obj.__dict__,write_file,indent=4)
+                    json.dump(dict_to_write,write_file,indent=4)
                 self.update_swordsmen_dict()
                 return Phrases.CREATE_SWORDSMAN_SUCCES.value.format(class_name,name)
             else:
@@ -193,8 +196,13 @@ class GameManager:
     
     def start_duel(self):
         pair=self.tournament.assign_duelists()
-        self.duel=duel.Duel(pair,(self.swordsmen_dict[pair["pair"][0]],self.swordsmen_dict[pair["pair"][1]]))
+        self.current_duelists=(self.swordsmen_dict[pair["pair"][0]],self.swordsmen_dict[pair["pair"][1]])
+        self.duel=duel.Duel(pair,self.current_duelists)
         return f"Начинается поединок между {self.duel.attacker.name} и {self.duel.defender.name}"
+    
+    def get_duelists_params(self):
+        return f"{self.current_duelists[0].name}\n{self.current_duelists[0].get_current_params()}\n\n\
+            {self.current_duelists[1].name}\n{self.current_duelists[1].get_current_params()}"
     
     def advance_stage(self):
         result=self.tournament.move_to_next_stage()

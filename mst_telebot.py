@@ -110,22 +110,26 @@ def start_duel(message):
     if gm.current_scene!=Scenes.STAGE:
         bot.send_message(message.chat.id,"Турнир еще не организован")
     else:
-        bot.send_message(message.chat.id,gm.start_duel())
-        time.sleep(1)
+        msg=bot.send_message(message.chat.id,gm.start_duel())
+        time.sleep(3)
         if gm.duel_detailed:
-            bot.send_message(message.chat.id,gm.duel.first_move())
+            msg_text=gm.get_duelists_params()+"\n\n"+gm.duel.first_move()
+            bot.edit_message_text(msg_text, chat_id=msg.chat.id, message_id=msg.id)
             time.sleep(3)
             while(gm.duel.pair["winner"]==""):
                 controller=Controller(gm.duel.attacker,gm.duel.defender)
                 is_moving=True
                 while(is_moving):
                     actions=controller.make_move()
-                    bot.send_message(message.chat.id,gm.duel.make_attacker_move(actions[0])+gm.duel.make_defender_move(actions[1]))
-                    time.sleep(1)
-                    bot.send_message(message.chat.id,gm.duel.execute_all_actions())
-                    time.sleep(1)
+                    msg_text=gm.get_duelists_params()+"\n\n"+gm.duel.make_attacker_move(actions[0])+gm.duel.make_defender_move(actions[1])
+                    bot.edit_message_text(msg_text, chat_id=msg.chat.id, message_id=msg.id)
+                    time.sleep(2)
+                    msg_text=gm.get_duelists_params()+"\n\n"+gm.duel.execute_all_actions()
+                    bot.edit_message_text(msg_text, chat_id=msg.chat.id, message_id=msg.id)
+                    time.sleep(2)
                     if actions[0]==Actions.PASS: is_moving=False
-                bot.send_message(message.chat.id,gm.duel.pass_move())
+                msg_text=gm.get_duelists_params()+"\n\n"+gm.duel.pass_move()
+                bot.edit_message_text(msg_text, chat_id=msg.chat.id, message_id=msg.id)
                 time.sleep(3)
         else:
             while(gm.duel.pair["winner"]==""):
@@ -145,8 +149,8 @@ def start_duel(message):
 def set_duel_view(message):
     df_btn_txt="По умолчанию"
     dt_btn_txt="Подробный"
-    if gm.duel_detailed: dt_btn_txt+=" \U00002714"
-    else: df_btn_txt+=" \U00002714"
+    if gm.duel_detailed: dt_btn_txt+=" \U00002705"
+    else: df_btn_txt+=" \U00002705"
     df_btn.text=df_btn_txt
     dt_btn.text=dt_btn_txt
     bot.send_message(message.chat.id,"Выберите режим отображения поединка",reply_markup=markup)
@@ -155,13 +159,13 @@ def set_duel_view(message):
 def callback_query(call):
     if call.data == 'df_btn':
         gm.duel_detailed=False
-        df_btn.text="По умолчанию \U00002714"
+        df_btn.text="По умолчанию \U00002705"
         dt_btn.text="Подробный"
         bot.edit_message_text('Выбран режим отображения: по умолчанию', chat_id=call.message.chat.id, message_id=call.message.id, reply_markup=markup)
     elif call.data == 'dt_btn':
         gm.duel_detailed=True
         df_btn.text="По умолчанию"
-        dt_btn.text="Подробный \U00002714"
+        dt_btn.text="Подробный \U00002705"
         bot.edit_message_text('Выбран режим отображения: подробный', chat_id=call.message.chat.id, message_id=call.message.id, reply_markup=markup)
 
 bot.set_my_commands(commands)

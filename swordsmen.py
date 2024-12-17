@@ -8,8 +8,8 @@ class SwordsmenClasses(enum.Enum):
     FROST="Мечник Мороза"
     SHOCK="Мечник Молнии"
     ASSASSIN="Мечник Убийца"
-    PALADIN="Мечник Паладин"
-    SORCERER="Мечник Колдун"
+    #PALADIN="Мечник Паладин"
+    #SORCERER="Мечник Колдун"
     
 class Actions(enum.Enum):
     PASS=enum.auto()
@@ -21,15 +21,15 @@ class Actions(enum.Enum):
     COUNTER=enum.auto()
 
 class Swordsman:
-    def __init__(self,name,class_name=SwordsmenClasses.DEFAULT.value,attributes=None,skills=None,resistance=None):
+    def __init__(self,name,class_name=SwordsmenClasses.DEFAULT.value,attributes=None,skills=None,resistance=None,recovering=None,costs=None):
         self.name=name
         self.class_name=class_name
         
-        self.attributes={"health":100,"initiative":10,"skill":10,"armor":100} if attributes==None else attributes
-        self.skills={"attacking":80,"defence":20,"dodging":20,"mastery":5,"healing":30} if skills==None else skills
-        self.resistance={"heat":5,"cold":5,"shock":5,"poison":5,"curse":5} if resistance==None else resistance
-        self.recovering={"ap":3,"sp":3}
-        self.costs={"attack":3,"block":2,"heal":4}
+        self.attributes={"health":100,"initiative":15,"skill":12,"armor":100} if attributes==None else attributes
+        self.skills={"attacking":50,"defence":50,"dodging":25,"mastery":25,"healing":25} if skills==None else skills
+        self.resistance={"heat":15,"cold":15,"shock":15,"poison":15,"curse":15} if resistance==None else resistance
+        self.recovering={"ap":10,"sp":4} if recovering==None else recovering
+        self.costs={"attack":4,"block":2,"dodge":3,"heal":4,"special":6} if costs==None else costs
         
         self.reset_changing_params()
         
@@ -58,13 +58,41 @@ class Swordsman:
         return self.skills["defence"]
     
     def dodge(self):
-        pass
+        self.changing_params["ap"]-=self.costs["dodge"]
+        return self.skills["dodging"]
     
-    def counter(self):
-        pass
+    def counter(self,attacker):
+        self.changing_params["ap"]-=(self.costs["attack"]-self.costs["block"])
+        attack=self.skills["attacking"]//2
+        hp_dmg=0
+        arp_dmg=0
+        if attacker.changing_params["arp"]<attack:
+            hp_dmg=attack-attacker.changing_params["arp"]
+            attack-=hp_dmg
+        arp_dmg=random.randrange(attack+1)
+        attacker.changing_params["hp"]-=hp_dmg
+        attacker.changing_params["arp"]-=arp_dmg
+        return (self.name,hp_dmg,arp_dmg)
     
-    def do_special(self):
-        pass
+    def do_special(self,spec,dodge,defender):
+        self.changing_params["sp"]-=self.costs["special"]
+        special=self.skills["mastery"]
+        hp_dmg=0
+        spec_dmg=0
+        if dodge>0:
+            if self.compare_attributes(special,dodge):
+                special=random.randrange(special//2,special+1)
+            else:
+                return (defender.name,hp_dmg,spec_dmg)
+        if defender.changing_params["arp"]<special:
+            hp_dmg=special-defender.changing_params["arp"]
+            special-=hp_dmg
+        init_special=special-defender.changing_params["arp"]
+        if init_special<0: init_special=0
+        spec_dmg=random.randrange(init_special,special+1)//2
+        defender.changing_params["hp"]-=hp_dmg
+        defender.changing_params[spec]+=spec_dmg
+        return (self.name,hp_dmg,spec_dmg,spec)
     
     def do_no_dodging_special(self):
         pass    
@@ -141,12 +169,81 @@ class Swordsman:
     
 class BerserkSwordsman(Swordsman):
     def __init__(self,name):
-        super().__init__(name,SwordsmenClasses.BERSERK.value)
+        super().__init__(name,SwordsmenClasses.BERSERK.value,
+                         attributes={"health":125,"initiative":16,"skill":10,"armor":110},
+                         skills={"attacking":90,"defence":60,"dodging":20,"mastery":20,"healing":25},
+                         resistance={"heat":20,"cold":20,"shock":20,"poison":20,"curse":15},
+                         recovering={"ap":10,"sp":4},
+                         costs={"attack":4,"block":2,"dodge":3,"heal":4,"special":6})
+        self.special_damage="bleeding"
+    
+    def do_special(self,dodge,defender):
+        return super().do_special(self.special_damage,dodge,defender)
+
+class FireSwordsman(Swordsman):
+    def __init__(self,name):
+        super().__init__(name,SwordsmenClasses.FIRE.value,
+                         attributes={"health":100,"initiative":15,"skill":15,"armor":100},
+                         skills={"attacking":60,"defence":50,"dodging":25,"mastery":40,"healing":20},
+                         resistance={"heat":50,"cold":10,"shock":20,"poison":15,"curse":15},
+                         recovering={"ap":10,"sp":6},
+                         costs={"attack":4,"block":2,"dodge":3,"heal":4,"special":5})
+        self.special_damage="fire_dmg"
+        
+    def do_special(self,dodge,defender):
+        return super().do_special(self.special_damage,dodge,defender)
+        
+class FrostSwordsman(Swordsman):
+    def __init__(self,name):
+        super().__init__(name,SwordsmenClasses.FROST.value,
+                         attributes={"health":140,"initiative":12,"skill":15,"armor":120},
+                         skills={"attacking":40,"defence":80,"dodging":20,"mastery":40,"healing":20},
+                         resistance={"heat":20,"cold":50,"shock":10,"poison":15,"curse":15},
+                         recovering={"ap":9,"sp":6},
+                         costs={"attack":4,"block":2,"dodge":3,"heal":4,"special":5})
+        self.special_damage="frost_dmg"
+    
+    def do_special(self,dodge,defender):
+        return super().do_special(self.special_damage,dodge,defender)
+        
+class ShockSwordsman(Swordsman):
+    def __init__(self,name):
+        super().__init__(name,SwordsmenClasses.SHOCK.value,
+                         attributes={"health":100,"initiative":15,"skill":15,"armor":100},
+                         skills={"attacking":50,"defence":50,"dodging":25,"mastery":40,"healing":20},
+                         resistance={"heat":10,"cold":20,"shock":50,"poison":15,"curse":15},
+                         recovering={"ap":10,"sp":6},
+                         costs={"attack":4,"block":2,"dodge":3,"heal":4,"special":5})
+        self.special_damage="shock_dmg"
+        
+    def do_special(self,dodge,defender):
+        return super().do_special(self.special_damage,dodge,defender)
+        
+class AssassinSwordsman(Swordsman):
+    def __init__(self,name):
+        super().__init__(name,SwordsmenClasses.ASSASSIN.value,
+                         attributes={"health":90,"initiative":20,"skill":10,"armor":85},
+                         skills={"attacking":40,"defence":40,"dodging":50,"mastery":25,"healing":40},
+                         resistance={"heat":15,"cold":15,"shock":15,"poison":50,"curse":15},
+                         recovering={"ap":12,"sp":4},
+                         costs={"attack":4,"block":2,"dodge":2,"heal":4,"special":6})
+        self.special_damage="poison_dmg"
+        
+    def do_special(self,dodge,defender):
+        return super().do_special(self.special_damage,dodge,defender)
         
 def create_swordsman(name,class_name):
     match class_name:
         case SwordsmenClasses.BERSERK.value:
             return BerserkSwordsman(name)
+        case SwordsmenClasses.FIRE.value:
+            return FireSwordsman(name)
+        case SwordsmenClasses.FROST.value:
+            return FrostSwordsman(name)
+        case SwordsmenClasses.SHOCK.value:
+            return ShockSwordsman(name)
+        case SwordsmenClasses.ASSASSIN.value:
+            return AssassinSwordsman(name)
         case _:
             raise TypeError(f"Класс {class_name} не существует")
         
